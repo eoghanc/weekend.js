@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            * {
+                font-family: monospace;
+            }
+            #gamepad-info{
+                background-color:black;
+                color: greenyellow;
+                padding: 3px;
+                position:absolute;
+                top:0;
+                left:0;
+                right:0;
+                bottom:20px;
+            }
+            .gamepad-viz {
+                text-align: center;
+                background-color:gainsboro;
+                border-top: 1px solid gray;
+                border-bottom: 1px solid gray;
+                position: relative;
+                top:20px;
+                display:table;
+                margin:0 auto;
+            }
+            .snespad {
+                position: relative;
+                background-color:gainsboro;
+                border-bottom: 1px solid gray;
+                min-height: 30px;
+                min-width: 60px;
+            }
+            .snespad>.left,.snespad>.right {
+                min-height: 30px;
+                min-width: 30px;
+                background-color:gainsboro;
+                position: absolute;
+                top: -7px;
+                border: 1px solid gray;
+                border-radius: 30px;
+            }
+            .snespad>.left {
+                left:-15px;
+            }
+            .snespad>.right {
+                right:-15px;
+            }
+            .debug {
+                position: relative;
+                background-color: gainsboro;
+                line-height: 27px;
+                display: inline-block;
+                min-width: 40px;
+            }
+            #cursor {
+                position:absolute;
+                min-height: 16px;
+                min-width: 16px;
+                background:
+                    linear-gradient(
+                        to bottom,
+                            transparent 45%, 
+                            #000 45%, 
+                            #000 55%,  
+                            transparent 55%),
+                    linear-gradient(
+                        to right,
+                            transparent 45%, 
+                            #000 45%, 
+                            #000 55%,  
+                            transparent 55%);
+            }
+            #gamepad-area {
+                background-color:skyblue;
+                position:absolute;
+                top:20px;
+                left:0;
+                right:0;
+                bottom:0;
+            }
+        </style>
+        <script>
+            class TwoWayMap {
+                constructor(map) {
+                   this.map = map;
+                   this.reverseMap = {};
+                   for(let key in map) {
+                      const value = map[key];
+                      this.reverseMap[value] = key;   
+                   }
+                }
+                get(key) { return this.map[key]; }
+                value(key) { return this.reverseMap[key]; }
+            }
+            var gamepad_emoji = ' + -- + ';
+            var gamepadInfo;
+            var cursor;
+            var gameLoopId,padPollId;
+            var x = -200;
+            var y = -200;
+            var speed = false;
+            var mapping;
+            
+            var gamepads = [];
+            
+            function detectMapping(id) {
+                if (id.includes("(Vendor: 054c Product: 0cda)")) {
+                    var psClassicMapping = {
+                        simpleName: "PlayStation Classic Controller",
+                        buttons: new TwoWayMap({
+                            X: 0,
+                            A: 1,
+                            B: 2,
+                            Y: 3,
+                            L1: 6,
+                            L2: 4,
+                            R1: 7,
+                            R2: 5, 
+                            SELECT: 8,
+                            START: 9
+                        }),
+                        axes: new TwoWayMap({
+                            LEFT_THUMB_X: 0,
+                            LEFT_THUMB_Y: 1
+                        })
+                    };
+                    return psClassicMapping;
+                }
+                
+                var sn30mapping = {
+                    simpleName: "8bitdo SN30 Controller",
+                    buttons: new TwoWayMap({
+                        UP: 12,
+                        DOWN: 13,
+                        LEFT: 14,
+                        RIGHT: 15,
+                        A: 1,
+                        B: 0,
+                        X: 3,
+                        Y: 2,
+                        L1: 4,
+                        L2: 6,
+                        R1: 5,
+                        R2: 7, 
+                        SELECT: 8,
+                        START: 9,
+                        LEFT_THUMB_CLICK: 10,
+                        RIGHT_THUMB_CLICK: 11
+                    }),
+                    axes: new TwoWayMap({
+                        LEFT_THUMB_X: 0,
+                        LEFT_THUMB_Y: 1,
+                        RIGHT_THUMB_X: 2,
+                        RIGHT_THUMB_Y: 3
+                    })
+                };
+                return sn30mapping;
+            }
+
+            function buttonPressed(b) {
+              if (typeof(b) == "object") {
+                return b.pressed;
+              }
+              return b == 1.0;
+            }
+
+            function axisPressed(b) {
+                return b;
+            }
+            function pollPads() {
+                gamepads = navigator.getGamepads();
+            }
+
+            function gameLoop() {
+                pollPads();
+                if (gamepads.length === 0) {
+                    return;
+                }
+
+                var gp = [].slice.call(gamepads).find((e)=>e);
+                
+                var customButtonEvents = {
+                    [mapping.buttons.map.Y]: () => { speed = true },
+                    [mapping.buttons.map.UP]: () => { y-= (speed ? 2 : 1) },
+                    [mapping.buttons.map.DOWN]: () => { y+= (speed ? 2 : 1) },
+                    [mapping.buttons.map.LEFT]: () => { x-= (speed ? 2 : 1) },
+                    [mapping.buttons.map.RIGHT]: () => { x+= (speed ? 2 : 1) }
+                };
+                
+                var customAxesEvents = {
+                    [mapping.axes.map.LEFT_THUMB_X]: (v=0) => { x+= (v*2) },
+                    [mapping.axes.map.RIGHT_THUMB_X]: (v=0) => { x+= (v*2) },
+                    [mapping.axes.map.LEFT_THUMB_Y]: (v=0) => { y+= (v*2) },
+                    [mapping.axes.map.RIGHT_THUMB_Y]: (v=0) => { y+= (v*2) }
+                };
+
+                var debugString = [];
+                for (let key in Object.keys(mapping.buttons.map)) {
+                    if (buttonPressed(gp.buttons[key])) {
+                        debugString.push(mapping.buttons.value(key));
+                        customButtonEvents[key] && customButtonEvents[key]();
+                    }
+                }
+                for (let key in Object.keys(mapping.axes.map)) {
+                    let tmp = axisPressed(gp.axes[key]);
+                    if (tmp < -0.01 || tmp > 0.01) {
+                        debugString.push(mapping.axes.value(key));
+                        customAxesEvents[key] && customAxesEvents[key](tmp);
+                    }
+                }
+                speed = false;
+
+                if (debugString.length !== 0) {
+                    debug.innerHTML = debugString.join(' + ');
+                } else if (debug.innerHTML !== gamepad_emoji) {
+                   debug.innerHTML =  gamepad_emoji;
+                }
+
+                cursor.style.left = (x * 3) + "px";
+                cursor.style.top = (y * 3) + "px";
+
+                gameLoopId = requestAnimationFrame(gameLoop);
+            }
+            window.onload = ()=> {
+                x = Math.max(document.documentElement.clientWidth, window.innerWidth || 0)/6;
+                y = Math.max(document.documentElement.clientHeight, window.innerHeight || 0)/6;
+                gamepadInfo = document.getElementById("gamepad-info");
+                cursor = document.getElementById("cursor");
+                debug = document.querySelector(".debug");
+                window.addEventListener("gamepadconnected", function(e) {
+                    var newGp = navigator.getGamepads()[e.gamepad.index];
+                    gamepadInfo.innerHTML = new Date().toString() + " - Gamepad connected at index " + newGp.index + ": " + newGp.id + ". It has " + newGp.buttons.length + " buttons and " + newGp.axes.length + " axes.";
+                    mapping = detectMapping(newGp.id);
+                    gameLoopId = requestAnimationFrame(gameLoop);
+                    clearInterval(padPollId);
+                });
+                window.addEventListener("gamepaddisconnected", function(e) {
+                    pollPads();
+                    if (gamepads.length === 0) {
+                        gamepadInfo.innerHTML = "Reconnect a controller to continue";
+                        cancelAnimationFrame(gameLoopId);
+                        setInterval(padPollId,1000);
+                    }
+                });
+                gamepads = navigator.getGamepads();
+            }
+        </script>
+    </head>
+    <body>
+        <div id=gamepad-info style="position:absolute;top:0;left:0;right:0;bottom:20;">
+           No controller detected. If one is connected, press any button.
+        </div>
+        <div id=gamepad-area>
+            <span id=cursor></span>
+            <span class=gamepad-viz>
+                <span class=snespad>
+                    <span class=left></span>
+                    <span class=right></span>
+                    <span class=debug> + -- + </span>
+                </span>
+            </span>
+        </div>
+    </body>
+</html>
