@@ -17,3 +17,15 @@ I have a few controllers to play with (no pun intended) and I'll be using them a
        A decent clone, this also presents as an xinput device. Similar button mapping to the SF30 but obviously with different button labels.
 
 If you have one of these (or even something else) open up the [Test Page](http://htmlpreview.github.io/?https://github.com/eoghanc/weekend.js/blob/master/simple-gamepad-api/test.html) and see it in action.
+
+## Features
+
+- Test page
+- Well, that's all right now...
+
+## Planned Features
+
+- Auto button mapping
+- Live button remapping
+- Multiplayer support
+- Player 1 election
