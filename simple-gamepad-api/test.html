@@ -83,6 +83,11 @@
             }
         </style>
         <script>
+            
+            // Minified
+            console.log("Loaded SGA core");class TwoWayMap{constructor(e){this.map=e,this.reverseMap={};for(let a in e){const t=e[a];this.reverseMap[t]=a}}get(e){return this.map[e]}value(e){return this.reverseMap[e]}}function detectMapping(e){return e.id.includes("(Vendor: 054c Product: 0cda)")?{simpleName:"PlayStation Classic Controller",buttons:new TwoWayMap({X:0,A:1,B:2,Y:3,L1:6,L2:4,R1:7,R2:5,SELECT:8,START:9}),axes:new TwoWayMap({LEFT_THUMB_X:0,LEFT_THUMB_Y:1})}:{simpleName:"8bitdo SN30 Controller",buttons:new TwoWayMap({UP:12,DOWN:13,LEFT:14,RIGHT:15,A:1,B:0,X:3,Y:2,L1:4,L2:6,R1:5,R2:7,SELECT:8,START:9,LEFT_THUMB_CLICK:10,RIGHT_THUMB_CLICK:11}),axes:new TwoWayMap({LEFT_THUMB_X:0,LEFT_THUMB_Y:1,RIGHT_THUMB_X:2,RIGHT_THUMB_Y:3})}}class SimpleGamepadAPI{constructor(e){e&&console.log(e)||(e={}),this._onConnectCallback,this._onDisconnectCallback,this._mapping,this._listening=!1,this._paused=!1,this._connectedGamepads=[],this._listen()}_poll(){let e=navigator.getGamepads();if(0===e.length)return;if(0===this._connectedGamepads.length)return;let a=this._connectedGamepads[0].index;this._connectedGamepads[0]=[].slice.call(e).find(e=>e.index===a)}_listen(){!0!==this._listening&&(this._listening=!0,window.addEventListener("gamepadconnected",e=>{var a=navigator.getGamepads()[e.gamepad.index];this._connectedGamepads=[a],!this._paused&&this._onConnectCallback&&this._onConnectCallback(a)}),window.addEventListener("gamepaddisconnected",function(e){!this._paused&&this._onDisconnectCallback&&this._onDisconnectCallback(e)}))}_frame(e){this._gameLoopId=requestAnimationFrame(()=>{this._poll(),this._connectedGamepads&&e({mapping:this._mapping,gamepads:this._connectedGamepads}),this._frame(e)})}on(e,a,t){switch(e){case"connect":this._onConnectCallback=(e=>{t&&t.autoDetect&&(this._mapping=detectMapping(e)),a({mapping:this._mapping,gamepad:e,index:0}),this._poll()});break;case"disconnect":this._onDisconnectCallback=(e=>{a({mapping:this._mapping,gamepad:e,index:0})});break;case"loop":!this._paused&&this._frame(a)}}pause(){this._paused=!this._paused}stop(){cancelAnimationFrame(this._gameLoopId)}}
+            // End
+            
             let x = -200;
             let y = -200;
             let cursors = [];
@@ -147,13 +152,13 @@
                 cursors[0].style.top = (y * 3) + "px";
             }
             window.onload = ()=> {
-                import("./sga-core.js")
-                    .then(sgacore=> {
+//                import("./sga-core.js")
+//                    .then(sgacore=> {
                         x = Math.max(document.documentElement.clientWidth, window.innerWidth || 0)/6;
                         y = Math.max(document.documentElement.clientHeight, window.innerHeight || 0)/6;
                         gamepadInfo = document.getElementById("gamepad-info");
                         debug = document.querySelector(".debug");
-                        let sga = new sgacore.SimpleGamepadAPI();
+                        let sga = new SimpleGamepadAPI();
                         sga.on('connect', function(tmp) {
                             gamepadInfo.innerHTML = '['+new Date().toString()+"] Gamepad ("+ tmp.gamepad.index +") connected: /" +  tmp.gamepad.id + "/. It has " +  tmp.gamepad.buttons.length + " buttons and " +  tmp.gamepad.axes.length + " axes.";
                             let cursor = document.createElement('span');
@@ -168,7 +173,7 @@
                              cursors.pop(); //multi...
                         });
                         sga.on('loop', gameLoop);
-                    }).catch(alert);
+//                    }).catch(alert);
             }
         </script>
     </head>
